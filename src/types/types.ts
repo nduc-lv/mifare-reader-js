@@ -1,7 +1,34 @@
 export interface MifareReaderInterface {
-    initialize: (portNo: string, baudRate: 9600 | 19200 | 57600 | 115200) => Promise<any>
+    initialize: (portNo: string, baudRate: 9600 | 19200 | 57600 | 115200, maxRetries: number) => Promise<any>
     selectCard: () => Promise<any>,
-    readCard: (key: Buffer | string, keyMode: "A" | "B") => Promise<any>,
-    changeLedColor: (color: "GREEN" | "RED" | "YELLOW" | "OFF") => Promise<any>,
+    readCard: (key: Buffer | string, keyMode: KEY_MODE_TYPE) => Promise<any>,
+    changeLedColor: (color: COLOR_TYPE) => Promise<any>,
     beep: () => Promise<any>
+}
+
+export type COLOR_TYPE = "GREEN" | "RED" | "YELLOW" | "OFF"
+
+export const COLORS = {
+    GREEN: "GREEN",
+    RED: "RED",
+    YELLOW: "YELLOW",
+    OFF: "OFF"
+} as const
+
+
+export const OPEN_PORT_PREFIX = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01]);
+export const OPEN_PORT_EXPECTED_RESPONSE = Buffer.from([0xAA, 0xBB, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00]);
+export const SELECT_CARD_COMMAND = Buffer.from([0xaa, 0xbb, 0x05, 0x00, 0x00, 0x00, 0x05, 0x02, 0x07]);
+export const RF_AUTHEN_COMMAND_PREFIX = Buffer.from([0xaa, 0xbb, 0x0d, 0x00, 0x00, 0x00, 0x07, 0x02, 0x60, 0x04]);
+export const RF_AUTHEN_EXPECTED_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x02, 0x00, 0x05]);
+export const READ_CARD_COMMAND = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x08, 0x02, 0x04, 0x0e]);
+export const LED_COMMAND_PREFIX = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x01]);
+export const LED_EXPECTED_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x01, 0x00, 0x06]);
+export const BEEP_COMMAND = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x06, 0x01, 0x08, 0x0f]);
+export const EXPECTED_BEEP_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x06, 0x01, 0x00, 0x07]);
+
+export type KEY_MODE_TYPE = 'A' | 'B';
+export const KEY_MODE = {
+    A: Buffer.from([0x61]),
+    B: Buffer.from([0x60])
 }

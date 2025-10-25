@@ -1,24 +1,8 @@
 import { SerialPort } from "serialport";
-import { MifareReaderInterface } from "../../types/types";
+import { BEEP_COMMAND, COLOR_TYPE, COLORS, EXPECTED_BEEP_RESPONSE, KEY_MODE, KEY_MODE_TYPE, LED_COMMAND_PREFIX, LED_EXPECTED_RESPONSE, MifareReaderInterface, OPEN_PORT_EXPECTED_RESPONSE, OPEN_PORT_PREFIX, READ_CARD_COMMAND, RF_AUTHEN_COMMAND_PREFIX, RF_AUTHEN_EXPECTED_RESPONSE, SELECT_CARD_COMMAND } from "../../types/types";
 import { resolve } from "path";
 
 
-const OPEN_PORT_PREFIX = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01]);
-const OPEN_PORT_EXPECTED_RESPONSE = Buffer.from([0xAA, 0xBB, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00]);
-const SELECT_CARD_COMMAND = Buffer.from([0xaa, 0xbb, 0x05, 0x00, 0x00, 0x00, 0x05, 0x02, 0x07]);
-const RF_AUTHEN_COMMAND_PREFIX = Buffer.from([0xaa, 0xbb, 0x0d, 0x00, 0x00, 0x00, 0x07, 0x02, 0x60, 0x04]);
-const RF_AUTHEN_EXPECTED_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x02, 0x00, 0x05]);
-const READ_CARD_COMMAND = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x08, 0x02, 0x04, 0x0e]);
-const LED_COMMAND_PREFIX = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x01]);
-const LED_EXPECTED_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x01, 0x00, 0x06]);
-const BEEP_COMMAND = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x06, 0x01, 0x08, 0x0f]);
-const EXPECTED_BEEP_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x06, 0x01, 0x00, 0x07]);
-
-type KEY_MODE_TYPE = 'A' | 'B';
-const KEY_MODE = {
-    A: Buffer.from([0x61]),
-    B: Buffer.from([0x60])
-}
 
 class MifareReader implements MifareReaderInterface {
     private port: SerialPort | null = null;
@@ -164,15 +148,15 @@ class MifareReader implements MifareReaderInterface {
         }
     }
 
-    private getChangeLedColorCommand(color: "GREEN" | "RED" | "YELLOW" | "OFF") {
+    private getChangeLedColorCommand(color: COLOR_TYPE) {
         switch (color) {
-            case "GREEN": {
+            case COLORS.GREEN: {
                 return Buffer.concat([LED_COMMAND_PREFIX, Buffer.from([0x02, 0x04])]);
             }
-            case "RED": {
+            case COLORS.RED: {
                 return Buffer.concat([LED_COMMAND_PREFIX, Buffer.from([0x01, 0x07])]);
             }
-            case "YELLOW": {
+            case COLORS.YELLOW: {
                 return Buffer.concat([LED_COMMAND_PREFIX, Buffer.from([0x03, 0x05])]);
             }
             default: {
@@ -181,7 +165,7 @@ class MifareReader implements MifareReaderInterface {
         }
     }
 
-    async changeLedColor(color: "GREEN" | "RED" | "YELLOW" | "OFF") {
+    async changeLedColor(color: COLOR_TYPE) {
         try {
             const changeLedCommand = this.getChangeLedColorCommand(color);
             const resposne = await this.sendCommandAndWait(changeLedCommand);
