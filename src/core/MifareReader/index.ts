@@ -1,0 +1,228 @@
+import { SerialPort } from "serialport";
+import { MifareReaderInterface } from "../../types/types";
+import { resolve } from "path";
+
+
+const OPEN_PORT_PREFIX = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01]);
+const OPEN_PORT_EXPECTED_RESPONSE = Buffer.from([0xAA, 0xBB, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00]);
+const SELECT_CARD_COMMAND = Buffer.from([0xaa, 0xbb, 0x05, 0x00, 0x00, 0x00, 0x05, 0x02, 0x07]);
+const RF_AUTHEN_COMMAND_PREFIX = Buffer.from([0xaa, 0xbb, 0x0d, 0x00, 0x00, 0x00, 0x07, 0x02, 0x60, 0x04]);
+const RF_AUTHEN_EXPECTED_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x02, 0x00, 0x05]);
+const READ_CARD_COMMAND = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x08, 0x02, 0x04, 0x0e]);
+const LED_COMMAND_PREFIX = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x01]);
+const LED_EXPECTED_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x07, 0x01, 0x00, 0x06]);
+const BEEP_COMMAND = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x06, 0x01, 0x08, 0x0f]);
+const EXPECTED_BEEP_RESPONSE = Buffer.from([0xaa, 0xbb, 0x06, 0x00, 0x00, 0x00, 0x06, 0x01, 0x00, 0x07]);
+
+type KEY_MODE_TYPE = 'A' | 'B';
+const KEY_MODE = {
+    A: Buffer.from([0x61]),
+    B: Buffer.from([0x60])
+}
+
+class MifareReader implements MifareReaderInterface {
+    private port: SerialPort | null = null;
+    private baudRate: 9600 | 19200 | 57600 | 115200 = 9600;
+    private isOpenPort: boolean = false
+
+    async initialize(portNo: string, baudRate: 9600 | 19200 | 57600 | 115200): Promise<any> {
+        this.port = new SerialPort({
+            path: portNo,
+            baudRate: baudRate
+        })
+        this.baudRate = baudRate;
+        const openPortCommand = this.getOpenPortCommand(this.baudRate);
+        const response = await this.sendCommandAndWait(openPortCommand);
+        if (!(Buffer.compare(response, OPEN_PORT_EXPECTED_RESPONSE) === 0)) {
+            console.log('Card reader failed to initialize')
+            this.isOpenPort = false;
+        } else {
+            console.log('Card reader initialized successfully')
+            this.isOpenPort = true;
+        }
+        return this.isOpenPort;
+    }
+
+    async selectCard() {
+        if (!this.port || !this.isOpenPort) {
+            throw new Error("Port is not open");
+        }
+        try {
+            const response = await this.sendCommandAndWait(SELECT_CARD_COMMAND);
+
+            // Check if 3rd byte (index 2) is 0x0a
+            if (response.length < 3 || response[2] !== 0x0a) {
+                // FAILED TO SELECT CARD
+                return null
+            }
+
+            const cardData = response.subarray(6);
+
+            return cardData.toString('hex');
+        }
+        catch (e: any) {
+            throw new Error(e.message);
+        }
+    }
+
+    async authen(key: Buffer | string = 'ffffffffffff', keyMode: KEY_MODE_TYPE = 'A') {
+        try {
+            let keyBuffer: Buffer;
+
+            if (typeof key === 'string') {
+                keyBuffer = Buffer.from(key, 'hex');
+            } else {
+                keyBuffer = key;
+            }
+
+            if (keyBuffer.length !== 6) {
+                throw new Error('Key must be exactly 6 bytes');
+            }
+
+            const km = KEY_MODE[keyMode];
+
+            const authenCommand = Buffer.concat([RF_AUTHEN_COMMAND_PREFIX, keyBuffer, km]);
+
+            const response = await this.sendCommandAndWait(authenCommand);
+
+            if (Buffer.compare(response, RF_AUTHEN_EXPECTED_RESPONSE) === 0) {
+                return true;
+            }
+            return false;
+        }
+        catch (e) {
+            console.log(e);
+            return false;
+        }
+    }
+
+    async readCard(key: Buffer | string = 'ffffffffffff', keyMode: KEY_MODE_TYPE = 'A') {
+        try {
+            const authResult = await this.authen(key, keyMode);
+            if (!authResult) {
+                throw new Error("Failed To Authen")
+            }
+            const response = await this.sendCommandAndWait(READ_CARD_COMMAND);
+            // Check if 3rd byte (index 2) is 0x0a
+            if (response.length < 3 || response[2] !== 0x16) {
+                return null
+            }
+            const cardData = response.subarray(9, 25);
+            return cardData.toString("hex");
+
+        }
+        catch (e) {
+            console.log(e);
+            throw new Error("Failed To Authen");
+        }
+    }
+
+    closePort() {
+        this.port?.close();
+    }
+
+    private getOpenPortCommand(baudRate: number) {
+        switch (baudRate) {
+            case 9600: {
+                return Buffer.concat([OPEN_PORT_PREFIX, Buffer.from([0x01, 0x01])]);
+            }
+            case 19200: {
+                return Buffer.concat([OPEN_PORT_PREFIX, Buffer.from([0x03, 0x03])]);
+            }
+            case 57600: {
+                return Buffer.concat([OPEN_PORT_PREFIX, Buffer.from([0x06, 0x06])]);
+            }
+            case 115200: {
+                return Buffer.concat([OPEN_PORT_PREFIX, Buffer.from([0x07, 0x07])]);
+            }
+            default: {
+                return Buffer.concat([OPEN_PORT_PREFIX, Buffer.from([0x01, 0x01])]);
+            }
+        }
+    }
+
+    private getChangeLedColorCommand(color: "GREEN" | "RED" | "YELLOW" | "OFF") {
+        switch (color) {
+            case "GREEN": {
+                return Buffer.concat([LED_COMMAND_PREFIX, Buffer.from([0x02, 0x04])]);
+            }
+            case "RED": {
+                return Buffer.concat([LED_COMMAND_PREFIX, Buffer.from([0x01, 0x07])]);
+            }
+            case "YELLOW": {
+                return Buffer.concat([LED_COMMAND_PREFIX, Buffer.from([0x03, 0x05])]);
+            }
+            default: {
+                return Buffer.concat([LED_COMMAND_PREFIX, Buffer.from([0x00, 0x06])]);
+            }
+        }
+    }
+
+    async changeLedColor(color: "GREEN" | "RED" | "YELLOW" | "OFF") {
+        try {
+            const changeLedCommand = this.getChangeLedColorCommand(color);
+            const resposne = await this.sendCommandAndWait(changeLedCommand);
+            if (Buffer.compare(resposne, LED_EXPECTED_RESPONSE) !== 0 ){
+                return false;
+            }
+            return true;
+        }
+        catch (e:any) {
+            throw new Error(e.message);
+        }
+    }
+
+    async beep() {
+        try {
+            const resposne = await this.sendCommandAndWait(BEEP_COMMAND);
+            if (Buffer.compare(resposne, EXPECTED_BEEP_RESPONSE) !== 0) {
+                return false;
+            }
+            return true;
+        }
+        catch (e: any) {
+            throw new Error(e.message);
+        }
+    }
+
+    private async sendCommandAndWait(command: Array<number> | Buffer, timeout: number = 3000): Promise<Buffer> {
+        return new Promise((resolve, reject) => {
+            if (!this.port) {
+                reject(new Error('Port is not open'));
+                return;
+            }
+            const buffer = Buffer.isBuffer(command) ? command : Buffer.from(command);
+            let responseData = Buffer.alloc(0);
+            let timeoutId;
+
+            // Set up data handler
+            const onData = (chunk: Buffer<ArrayBuffer>) => {
+                responseData = Buffer.concat([responseData, chunk]);
+            };
+
+            // Set up timeout
+            timeoutId = setTimeout(() => {
+                this.port!.removeListener('data', onData);
+                if (responseData.length > 0) {
+                    resolve(responseData);
+                } else {
+                    reject(new Error('Timeout waiting for response'));
+                }
+            }, timeout);
+
+            // Listen for response
+            this.port.on('data', onData);
+
+            // Write command
+            this.port.write(buffer, (err) => {
+                if (err) {
+                    clearTimeout(timeoutId);
+                    this.port!.removeListener('data', onData);
+                    reject(new Error(`Write failed: ${err.message}`));
+                }
+            });
+        });
+    }
+}
+
+export default MifareReader;
