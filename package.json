@@ -2,15 +2,25 @@
   "name": "mifare-reader-js",
   "version": "1.0.0",
   "description": "A TypeScript library for interfacing with MIFARE card readers via serial port communication",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/cjs/index.d.ts"
+    }
+  },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:cjs && npm run build:esm",
+    "build:cjs": "tsc",
+    "build:esm": "tsc -p tsconfig.esm.json && node scripts/create-esm-package.js",
     "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
     "dev": "ts-node",

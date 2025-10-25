@@ -28,6 +28,8 @@ npm link mifare-reader-js
 
 ## Basic Usage
 
+> **Note:** This package supports both CommonJS (`require`) and ES Modules (`import`). Both formats work seamlessly in TypeScript, JavaScript, and all modern bundlers.
+
 ### TypeScript
 
 ```typescript
@@ -62,7 +64,41 @@ async function readCard() {
 readCard();
 ```
 
-### JavaScript (ES6)
+### JavaScript (ES6 Modules)
+
+```javascript
+import { MifareReader, COLORS } from 'mifare-reader-js';
+
+const reader = new MifareReader();
+
+async function readCard() {
+    // Initialize
+    await reader.initialize('COM3', 9600);
+
+    // Select card
+    const cardId = await reader.selectCard();
+    if (cardId) {
+        console.log('Card ID:', cardId);
+
+        // Change LED
+        await reader.changeLedColor(COLORS.GREEN);
+
+        // Read card data
+        const data = await reader.readCard('FFFFFFFFFFFF', 'A');
+        console.log('Card data:', data);
+
+        // Beep
+        await reader.beep();
+    }
+
+    // Cleanup
+    reader.closePort();
+}
+
+readCard();
+```
+
+### JavaScript (CommonJS with async/await)
 
 ```javascript
 const { MifareReader, COLORS } = require('mifare-reader-js');
@@ -96,30 +132,6 @@ async function readCard() {
 readCard();
 ```
 
-### JavaScript (CommonJS)
-
-```javascript
-const { MifareReader } = require('mifare-reader-js');
-
-const reader = new MifareReader();
-
-reader.initialize('COM3', 9600)
-    .then(() => reader.selectCard())
-    .then((cardId) => {
-        if (cardId) {
-            console.log('Card ID:', cardId);
-            return reader.readCard('FFFFFFFFFFFF', 'A');
-        }
-    })
-    .then((data) => {
-        console.log('Card data:', data);
-        reader.closePort();
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-        reader.closePort();
-    });
-```
 
 ## Available Exports
 
