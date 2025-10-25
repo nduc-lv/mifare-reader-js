@@ -1,19 +1,44 @@
 {
   "name": "mifare-reader-js",
   "version": "1.0.0",
+  "description": "A TypeScript library for interfacing with MIFARE card readers via serial port communication",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "test:mifare": "ts-node",
+    "dev": "ts-node",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "mifare",
+    "rfid",
+    "card-reader",
+    "serialport",
+    "nfc",
+    "mifare-classic",
+    "rfid-reader",
+    "typescript"
+  ],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": "",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "devDependencies": {
     "@types/node": "^24.9.1",
     "ts-node": "^10.9.2",
