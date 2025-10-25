@@ -1,6 +1,6 @@
 {
   "name": "mifare-reader-js",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A TypeScript library for interfacing with MIFARE card readers via serial port communication",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
