@@ -11,7 +11,7 @@ async function testLED() {
         // /dev/ttyUSB0, /dev/ttyACM0 on Linux
         // /dev/cu.usbserial on macOS
         const portName = 'COM5'; // Change this to your port
-        const baudRate = 9600;
+        const baudRate = 19200;
 
         const initialized = await reader.initialize(portName, baudRate);
 

@@ -22,24 +22,47 @@ const KEY_MODE = {
 
 class MifareReader implements MifareReaderInterface {
     private port: SerialPort | null = null;
-    private baudRate: 9600 | 19200 | 57600 | 115200 = 9600;
+    private baudRate: 9600 | 19200 | 57600 | 115200 = 19200;
     private isOpenPort: boolean = false
 
-    async initialize(portNo: string, baudRate: 9600 | 19200 | 57600 | 115200): Promise<any> {
+    async initialize(portNo: string, baudRate: 9600 | 19200 | 57600 | 115200, maxRetries: number = 20): Promise<any> {
         this.port = new SerialPort({
             path: portNo,
             baudRate: baudRate
         })
         this.baudRate = baudRate;
         const openPortCommand = this.getOpenPortCommand(this.baudRate);
-        const response = await this.sendCommandAndWait(openPortCommand);
-        if (!(Buffer.compare(response, OPEN_PORT_EXPECTED_RESPONSE) === 0)) {
-            console.log('Card reader failed to initialize')
-            this.isOpenPort = false;
-        } else {
-            console.log('Card reader initialized successfully')
-            this.isOpenPort = true;
+
+        let response = null;
+        let retryCount = 0;
+
+        // Keep trying until we get a successful response or reach max retries
+        while (retryCount < maxRetries) {
+            try {
+                response = await this.sendCommandAndWait(openPortCommand, 3000);
+                // Check if response is valid
+                if (Buffer.compare(response, OPEN_PORT_EXPECTED_RESPONSE) === 0) {
+                    console.log('Card reader initialized successfully')
+                    this.isOpenPort = true;
+                    return this.isOpenPort;
+                }
+
+                console.log(`Attempt ${retryCount + 1}: Invalid response, retrying...`);
+            }
+            catch (e) {
+                console.log(`Attempt ${retryCount + 1}: Error occurred, retrying...`, e instanceof Error ? e.message : e);
+            }
+
+            retryCount++;
+
+            // Small delay before retry
+            if (retryCount < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
         }
+
+        console.log('Card reader failed to initialize after', maxRetries, 'attempts')
+        this.isOpenPort = false;
         return this.isOpenPort;
     }
 
@@ -162,12 +185,12 @@ class MifareReader implements MifareReaderInterface {
         try {
             const changeLedCommand = this.getChangeLedColorCommand(color);
             const resposne = await this.sendCommandAndWait(changeLedCommand);
-            if (Buffer.compare(resposne, LED_EXPECTED_RESPONSE) !== 0 ){
+            if (Buffer.compare(resposne, LED_EXPECTED_RESPONSE) !== 0) {
                 return false;
             }
             return true;
         }
-        catch (e:any) {
+        catch (e: any) {
             throw new Error(e.message);
         }
     }
@@ -185,7 +208,7 @@ class MifareReader implements MifareReaderInterface {
         }
     }
 
-    private async sendCommandAndWait(command: Array<number> | Buffer, timeout: number = 3000): Promise<Buffer> {
+    private async sendCommandAndWait(command: Array<number> | Buffer, timeout: number = 5000): Promise<Buffer> {
         return new Promise((resolve, reject) => {
             if (!this.port) {
                 reject(new Error('Port is not open'));
@@ -202,7 +225,7 @@ class MifareReader implements MifareReaderInterface {
 
             // Set up timeout
             timeoutId = setTimeout(() => {
-                this.port!.removeListener('data', onData);
+                this.port!.off('data', onData);
                 if (responseData.length > 0) {
                     resolve(responseData);
                 } else {
@@ -217,7 +240,7 @@ class MifareReader implements MifareReaderInterface {
             this.port.write(buffer, (err) => {
                 if (err) {
                     clearTimeout(timeoutId);
-                    this.port!.removeListener('data', onData);
+                    this.port!.off('data', onData);
                     reject(new Error(`Write failed: ${err.message}`));
                 }
             });
