@@ -1,293 +1,509 @@
-# V3 Reader SerialPort
+# mifare-reader-js
 
-A TypeScript library for interfacing with MIFARE card readers via serial port communication. This project provides a simple and robust API for reading MIFARE Classic cards, controlling LED indicators, and managing beep functionality.
+A TypeScript library for interfacing with MIFARE card readers via serial port communication. This library provides a clean, promise-based API for communicating with MIFARE Classic RFID cards through serial port connections, commonly used with devices like the ACR122U or similar card readers.
 
 ## Features
 
-- **Card Operations**
-  - Initialize and configure card reader
-  - Select/detect MIFARE cards
-  - Authenticate using Key A or Key B
-  - Read card data from sectors
-
-- **Device Control**
-  - LED color control (RED, GREEN, YELLOW, OFF)
-  - Buzzer/beep control
-  - Port management (open/close)
-
-- **Flexible Configuration**
-  - Multiple baud rate support (9600, 19200, 57600, 115200)
-  - Cross-platform serial port support
-  - TypeScript type safety
+- **Hardware Integration**:
+  - LED control (4 color states: GREEN, RED, YELLOW, OFF)
+  - Audio feedback (beep functionality)
+  - Card detection and reading
+  - RF authentication with key modes (A/B)
 
 ## Installation
 
+### Prerequisites
+
+- Node.js >= 14.0.0
+- A MIFARE card reader connected via serial port
+
+### Install from npm
+
 ```bash
-npm install
+npm install mifare-reader-js
 ```
 
-## Dependencies
+### Install from Local Directory
 
-- **serialport** - Serial port communication
-- **typescript** - TypeScript compiler
-- **@types/node** - Node.js type definitions
-- **ts-node** - TypeScript execution for development
-
-## Project Structure
-
-```
-v3-reader-serialport/
-├── src/
-│   ├── core/
-│   │   └── MifareReader/
-│   │       └── index.ts           # Main MifareReader class
-│   ├── types/
-│   │   └── types.ts                # TypeScript type definitions
-│   ├── index.ts                    # Project entry point
-│   ├── example-test.ts             # Example: Select card
-│   ├── example-test-readcard.ts    # Example: Read card data
-│   ├── example-test-led.ts         # Example: LED control
-│   ├── example-test-beep.ts        # Example: Beep control
-│   └── example-test-port.ts        # Example: Port operations
-├── package.json
-├── tsconfig.json
-└── README.md
+```bash
+npm install /path/to/mifare-reader-js
 ```
 
-## Usage
+### Install from Package File
 
-### Basic Setup
+```bash
+npm pack
+npm install ./mifare-reader-js-1.0.0.tgz
+```
+
+## Quick Start
+
+### TypeScript Example
 
 ```typescript
-import MifareReader from './core/MifareReader';
+import { MifareReader, COLORS } from 'mifare-reader-js';
 
 const reader = new MifareReader();
 
-// Initialize the reader
-const initialized = await reader.initialize('COM3', 9600);
+async function readCard() {
+  try {
+    // Initialize reader on COM3 at 19200 baud
+    await reader.initialize('COM3', 19200);
 
-if (initialized) {
-    console.log('Card reader ready!');
+    // Detect a card
+    const cardId = await reader.selectCard();
+
+    if (cardId) {
+      console.log('Card detected:', cardId);
+
+      // Visual feedback: turn LED green
+      await reader.changeLedColor(COLORS.GREEN);
+
+      // Read card data with default MIFARE key
+      const data = await reader.readCard();
+      console.log('Card data:', data);
+
+      // Audio feedback
+      await reader.beep();
+    } else {
+      console.log('No card detected');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    reader.closePort();
+  }
 }
+
+readCard();
 ```
 
-### Select a Card
+### JavaScript (CommonJS) Example
 
-```typescript
-// Wait for a card to be placed on the reader
-const cardId = await reader.selectCard();
+```javascript
+const { MifareReader, COLORS } = require('mifare-reader-js');
 
-if (cardId) {
-    console.log('Card detected:', cardId);
-} else {
-    console.log('No card detected');
+const reader = new MifareReader();
+
+async function main() {
+  try {
+    await reader.initialize('COM3', 19200);
+    const cardId = await reader.selectCard();
+
+    if (cardId) {
+      await reader.changeLedColor(COLORS.GREEN);
+      await reader.beep();
+      const data = await reader.readCard();
+      console.log('Card data:', data);
+    }
+  } finally {
+    reader.closePort();
+  }
 }
-```
 
-### Read Card Data
-
-```typescript
-// Using default key (FFFFFFFFFFFF) and Key A
-const cardData = await reader.readCard();
-
-// Using custom key
-const customKey = 'A0A1A2A3A4A5';
-const data = await reader.readCard(customKey, 'A');
-
-// Using Key B
-const dataB = await reader.readCard('FFFFFFFFFFFF', 'B');
-```
-
-### Control LED
-
-```typescript
-// Change LED color
-await reader.changeLedCorlor('GREEN');  // Success indicator
-await reader.changeLedCorlor('RED');    // Error indicator
-await reader.changeLedCorlor('YELLOW'); // Warning indicator
-await reader.changeLedCorlor('OFF');    // Turn off LED
-```
-
-### Control Beep
-
-```typescript
-// Trigger a beep
-await reader.beep();
-```
-
-### Close Port
-
-```typescript
-// When done, close the port
-reader.closePort();
-```
-
-## Available Scripts
-
-### Development
-
-```bash
-# Run TypeScript files directly
-npm run test:mifare -- src/example-test.ts
-```
-
-### Build
-
-```bash
-# Compile TypeScript to JavaScript
-npm run build
-```
-
-### Run Compiled Code
-
-```bash
-# Run the compiled JavaScript
-npm start
-```
-
-## Example Tests
-
-The project includes several example test files to help you get started:
-
-### 1. Select Card Test
-```bash
-npm run test:mifare -- src/example-test.ts
-```
-Tests basic card detection and ID reading.
-
-### 2. Read Card Test
-```bash
-npm run test:mifare -- src/example-test-readcard.ts
-```
-Tests card authentication and data reading.
-
-### 3. LED Control Test
-```bash
-npm run test:mifare -- src/example-test-led.ts
-```
-Cycles through all LED colors (RED → GREEN → YELLOW → OFF).
-
-### 4. Beep Test
-```bash
-npm run test:mifare -- src/example-test-beep.ts
-```
-Tests the buzzer/beep functionality with multiple beeps.
-
-### 5. Port Operations Test
-```bash
-npm run test:mifare -- src/example-test-port.ts
-```
-Tests port initialization, closing, and different baud rates.
-
-## Configuration
-
-### Serial Port Setup
-
-Before running any tests, update the port name in the example files:
-
-**Windows:**
-```typescript
-const portName = 'COM3'; // or COM4, COM5, etc.
-```
-
-**Linux:**
-```typescript
-const portName = '/dev/ttyUSB0'; // or /dev/ttyACM0
-```
-
-**macOS:**
-```typescript
-const portName = '/dev/cu.usbserial'; // or similar
-```
-
-### Baud Rate
-
-The card reader supports multiple baud rates:
-- 9600 (default)
-- 19200
-- 57600
-- 115200
-
-```typescript
-await reader.initialize('COM3', 115200);
+main();
 ```
 
 ## API Reference
 
 ### MifareReader Class
 
+#### Constructor
+
+```typescript
+const reader = new MifareReader();
+```
+
 #### Methods
 
-##### `initialize(portNo: string, baudRate: 9600 | 19200 | 57600 | 115200): Promise<boolean>`
-Initialize the card reader and open the serial port.
+##### `initialize(portNo: string, baudRate: 9600 | 19200 | 57600 | 115200, maxRetries?: number): Promise<boolean>`
+
+Initializes connection to the card reader device.
+
+**Parameters:**
+- `portNo` - Serial port name
+  - Windows: `'COM1'`, `'COM3'`, etc.
+  - Linux/Mac: `'/dev/ttyUSB0'`, `'/dev/ttyACM0'`, etc.
+- `baudRate` - Communication speed (default: 19200)
+  - Supported values: `9600`, `19200`, `57600`, `115200`
+- `maxRetries` - Maximum retry attempts (default: 20)
+
+**Returns:** Promise resolving to `true` if successful, `false` otherwise
+
+**Example:**
+```typescript
+await reader.initialize('COM3', 19200);
+```
+
+---
 
 ##### `selectCard(): Promise<string | null>`
-Detect and select a MIFARE card. Returns the card ID in hex format or null if no card detected.
 
-##### `authen(key: Buffer | string, keyMode: 'A' | 'B'): Promise<boolean>`
-Authenticate with the card using the specified key. Returns true if authentication succeeds.
+Attempts to detect and select a card in the reader.
 
-##### `readCard(key: Buffer | string, keyMode: 'A' | 'B'): Promise<Buffer | null>`
-Authenticate and read data from the card. Returns card data or null on failure.
+**Returns:** Promise resolving to:
+- Card ID as a hex string if card is detected
+- `null` if no card is detected
 
-##### `changeLedCorlor(color: 'GREEN' | 'RED' | 'YELLOW' | 'OFF'): Promise<void>`
-Change the LED color on the card reader.
+**Example:**
+```typescript
+const cardId = await reader.selectCard();
+if (cardId) {
+  console.log('Card ID:', cardId);
+}
+```
 
-##### `beep(): Promise<void>`
-Trigger a beep sound from the card reader.
+---
+
+##### `readCard(key?: string | Buffer, keyMode?: 'A' | 'B'): Promise<string>`
+
+Reads data from the selected card. Requires successful authentication first.
+
+**Parameters:**
+- `key` - 6-byte authentication key (hex string or Buffer)
+  - Default: `'ffffffffffff'` (default MIFARE key)
+  - Must be 6 bytes/12 hex characters
+- `keyMode` - Authentication key mode
+  - `'A'` (default) or `'B'`
+
+**Returns:** Promise resolving to card data as a hex string (16 bytes)
+
+**Note:** This method internally calls `authen()` for authentication.
+
+**Example:**
+```typescript
+// Using default key
+const data = await reader.readCard();
+
+// Using custom key with mode B
+const data = await reader.readCard('123456789abc', 'B');
+```
+
+---
+
+##### `authen(key?: string | Buffer, keyMode?: 'A' | 'B'): Promise<boolean>`
+
+Authenticates with the card using the specified key. Must be called before `readCard()`.
+
+**Parameters:**
+- `key` - 6-byte authentication key (default: `'ffffffffffff'`)
+- `keyMode` - Key mode `'A'` or `'B'` (default: `'A'`)
+
+**Returns:** Promise resolving to `true` if authentication successful, `false` otherwise
+
+**Example:**
+```typescript
+const authenticated = await reader.authen('ffffffffffff', 'A');
+if (authenticated) {
+  const data = await reader.readCard();
+}
+```
+
+---
+
+##### `changeLedColor(color: 'GREEN' | 'RED' | 'YELLOW' | 'OFF'): Promise<boolean>`
+
+Controls the reader's LED indicator.
+
+**Parameters:**
+- `color` - LED color state
+  - `'GREEN'` - Green LED
+  - `'RED'` - Red LED
+  - `'YELLOW'` - Yellow LED
+  - `'OFF'` - Turn off LED
+
+**Returns:** Promise resolving to `true` if successful, `false` otherwise
+
+**Example:**
+```typescript
+import { COLORS } from 'mifare-reader-js';
+
+await reader.changeLedColor(COLORS.GREEN);
+```
+
+---
+
+##### `beep(): Promise<boolean>`
+
+Triggers the reader's audio indicator.
+
+**Returns:** Promise resolving to `true` if successful, `false` otherwise
+
+**Example:**
+```typescript
+await reader.beep();
+```
+
+---
 
 ##### `closePort(): void`
-Close the serial port connection.
 
-## Protocol Details
+Closes the serial port connection. Should be called for proper cleanup.
 
-The library uses a binary protocol for communication with the card reader:
+**Example:**
+```typescript
+reader.closePort();
+```
 
-- **Command Format:** `AA BB [LENGTH] 00 00 00 [COMMAND] [DATA] [CHECKSUM]`
-- **Response Format:** `AA BB [LENGTH] 00 00 00 [COMMAND] [DATA] [STATUS] [CHECKSUM]`
+---
 
-### Common Commands
+## Constants
 
-- `SELECT_CARD`: `AA BB 05 00 00 00 05 02 07`
-- `RF_AUTHEN`: `AA BB 0D 00 00 00 07 02 60 04 [KEY] [MODE]`
-- `READ_CARD`: `AA BB 06 00 00 00 08 02 04 0E`
-- `LED_CONTROL`: `AA BB 06 00 00 00 07 01 [COLOR] [CHECKSUM]`
-- `BEEP`: `AA BB 06 00 00 00 06 01 08 0F`
+### COLORS
+
+```typescript
+import { COLORS } from 'mifare-reader-js';
+
+console.log(COLORS.GREEN);   // "GREEN"
+console.log(COLORS.RED);     // "RED"
+console.log(COLORS.YELLOW);  // "YELLOW"
+console.log(COLORS.OFF);     // "OFF"
+```
+
+### KEY_MODE
+
+```typescript
+import { KEY_MODE } from 'mifare-reader-js';
+
+console.log(KEY_MODE.A);  // Buffer [0x61]
+console.log(KEY_MODE.B);  // Buffer [0x60]
+```
+
+---
+
+## Port Configuration
+
+To find your serial port:
+
+### Windows
+
+- Check Device Manager → Ports (COM & LPT)
+- Common ports: `COM1`, `COM3`, `COM5`
+- Use `node -e "require('serialport').SerialPort.list().then(ports => console.log(ports))"`
+
+### Linux
+
+```bash
+# List all serial ports
+ls -la /dev/tty*
+
+# Common ports: /dev/ttyUSB0, /dev/ttyACM0
+dmesg | grep tty  # Check kernel messages
+```
+
+### macOS
+
+```bash
+# List all serial ports
+ls -la /dev/tty.* /dev/cu.*
+
+# Common ports: /dev/cu.usbserial-*, /dev/cu.SLAB_USBtoUART
+```
+
+---
+
+## Development Guide
+
+### Prerequisites
+
+- Node.js >= 14.0.0
+- npm or yarn
+- TypeScript knowledge (recommended)
+
+### Setup
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd mifare-reader-js
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Build the project:
+```bash
+npm run build
+```
+
+### Project Structure
+
+```
+mifare-reader-js/
+├── src/
+│   ├── core/
+│   │   └── MifareReader/
+│   │       └── index.ts              # Main MifareReader class
+│   ├── types/
+│   │   └── types.ts                  # Type definitions and constants
+│   ├── example-test-*.ts             # Usage examples
+│   └── index.ts                      # Main entry point
+├── dist/
+│   ├── cjs/                          # CommonJS compiled output
+│   └── esm/                          # ES Module compiled output
+├── scripts/
+│   └── create-esm-package.js         # ESM build helper
+├── package.json
+├── tsconfig.json                     # TypeScript config (CommonJS)
+├── tsconfig.esm.json                 # TypeScript config (ES Modules)
+└── README.md
+```
+
+### Build Scripts
+
+```bash
+# Build both CommonJS and ES Module formats
+npm run build
+
+# Build only CommonJS
+npm run build:cjs
+
+# Build only ES Module
+npm run build:esm
+
+# Development mode (ts-node)
+npm run dev
+```
+
+### Compilation Details
+
+#### CommonJS Build
+- Configuration: `tsconfig.json`
+- Output: `dist/cjs/`
+- Target: ES2020
+- Module: CommonJS
+
+#### ES Module Build
+- Configuration: `tsconfig.esm.json`
+- Output: `dist/esm/`
+- Target: ES2020
+- Module: ES2020
+- Creates `package.json` with `"type": "module"`
+
+### TypeScript Configuration
+
+The project uses strict TypeScript settings:
+- Strict mode enabled
+- Source maps included
+- Declaration files (.d.ts) generated
+
+### Example Files
+
+Run the example files to test functionality:
+
+```bash
+# Using ts-node directly
+npx ts-node src/example-test-readcard.ts
+
+# Or with npm script
+npm run dev src/example-test-readcard.ts
+```
+
+Available examples:
+- `example-test-readcard.ts` - Card detection and data reading
+- `example-test-led.ts` - LED color control
+- `example-test-beep.ts` - Audio feedback
+- `example-test-port.ts` - Basic port connectivity
+- `example-test-select-card.ts` - Card selection/detection
+- `example-test-mixing.ts` - Combined operations
+
+**Note:** Update the port and baud rate in examples before running.
+
+### Making Changes
+
+1. Modify source files in `src/`
+2. Run `npm run build` to compile
+3. Test changes with example files
+4. Check compiled output in `dist/` directory
+
+### Adding New Features
+
+1. Add types to `src/types/types.ts`
+2. Implement functionality in `src/core/MifareReader/index.ts`
+3. Export new types/methods in `src/index.ts`
+4. Create example file to demonstrate usage
+5. Build and test with `npm run build`
+
+---
+
+## Publishing to npm
+
+1. Create npm account at https://www.npmjs.com
+2. Login locally:
+```bash
+npm login
+```
+
+3. Update `package.json` metadata:
+   - Update version in `version` field
+   - Add your username to `author` field
+   - Update `repository.url`, `bugs.url`, and `homepage`
+
+4. Publish:
+```bash
+npm publish
+```
+
+The `prepublishOnly` script automatically builds before publishing.
+
+---
 
 ## Troubleshooting
 
-### Port Access Issues
+### Port Not Found
 
-**Windows:** Ensure your user has permission to access COM ports.
+- Verify the port name matches your system
+- Check Device Manager (Windows) or `ls /dev/tty*` (Linux/Mac)
+- Ensure the reader is properly connected and recognized by the OS
 
-**Linux:** Add your user to the `dialout` group:
-```bash
-sudo usermod -a -G dialout $USER
-```
+### Connection Fails
 
-**macOS:** No special permissions typically required.
+- Try different baud rates (9600, 19200, 57600, 115200)
+- Verify the reader is powered and properly connected
+- Check for driver issues (Windows: USB drivers may need installation)
+- Increase `maxRetries` parameter
 
 ### Card Not Detected
 
-- Ensure the card is placed flat on the reader
-- Check that the reader is properly powered
-- Verify the baud rate matches your device
-- Try reinitializing the port
+- Ensure card is properly positioned in the reader
+- Try moving the card slightly to find the sweet spot
+- Check if the reader's LED is functioning
+- Verify card is a MIFARE Classic card
 
 ### Authentication Fails
 
-- Verify the key is correct (6 bytes / 12 hex characters)
-- Try both Key A and Key B
-- Default MIFARE key is `FFFFFFFFFFFF`
+- Verify the key is correct (should be 6 bytes/12 hex characters)
+- Try the default key `'ffffffffffff'`
+- Ensure key mode ('A' or 'B') matches the card configuration
+- Check card is still properly positioned
+
+### Module Import Issues
+
+- For CommonJS: `const { MifareReader } = require('mifare-reader-js');`
+- For ES Modules: `import { MifareReader } from 'mifare-reader-js';`
+- Ensure build output exists: `npm run build`
+
+---
 
 ## License
 
 ISC
 
+---
+
+## Resources
+
+- [serialport Documentation](https://serialport.io/)
+- [TypeScript Documentation](https://www.typescriptlang.org/)
+
+---
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
-
-## Support
-
-For issues and questions, please open an issue on the project repository.
+Contributions are welcome! Please ensure:
+- Code follows TypeScript strict mode
+- Changes are properly tested
+- Documentation is updated
+- Build passes without errors: `npm run build`
