@@ -40,10 +40,10 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/nduc-lv/mifare-reader-js"
   },
   "bugs": {
-    "url": ""
+    "url": "https://github.com/nduc-lv/mifare-reader-js/issues"
   },
   "homepage": "",
   "engines": {

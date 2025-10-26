@@ -1,14 +1,29 @@
 # mifare-reader-js
 
-A TypeScript library for interfacing with MIFARE card readers via serial port communication. This library provides a clean, promise-based API for communicating with MIFARE Classic RFID cards through serial port connections, commonly used with devices like the ACR122U or similar card readers.
+A TypeScript library for interfacing with MIFARE card readers via serial port communication. This library provides a clean, promise-based API for communicating with MIFARE Classic RFID cards through serial port connections, commonly used with devices like the CR522AU or similar card readers.
 
 ## Features
 
+- **Multi-Format Support**: Works with both CommonJS and ES Modules
+- **Full TypeScript Support**: Complete type definitions for all APIs
+- **Serial Communication**: Robust serial port communication using `serialport` library
+- **Retry Logic**: Built-in initialization retry mechanism (up to 20 attempts by default)
+- **Timeout Handling**: Configurable command timeouts prevent hanging operations
 - **Hardware Integration**:
   - LED control (4 color states: GREEN, RED, YELLOW, OFF)
   - Audio feedback (beep functionality)
   - Card detection and reading
   - RF authentication with key modes (A/B)
+
+## Tested Devices
+
+This library has been tested and confirmed to work with the following MIFARE card reader devices:
+
+| Brand | Model | Made By | Baudrate | Notes |
+|-------|-------|---------|----------|-------|
+| NfcPass | CR522AU-V7| ChinaReader | 19200 | N/A |
+
+> **Contributing**: If you've successfully tested this library with a specific reader model, please consider contributing by adding the device information to this table. Include the brand name, model number, manufacturer, and working baudrate.
 
 ## Installation
 
@@ -16,6 +31,11 @@ A TypeScript library for interfacing with MIFARE card readers via serial port co
 
 - Node.js >= 14.0.0
 - A MIFARE card reader connected via serial port
+- **Compatible driver for the reader device installed**
+  - **Windows**: After plugging in the device, it should be recognized in Device Manager under "Ports (COM & LPT)" section (e.g., COM3, COM5)
+  - **Linux**: The device should appear as `/dev/ttyUSB0`, `/dev/ttyACM0`, or similar. Check with `ls -la /dev/tty*`
+  - **macOS**: The device should appear as `/dev/cu.usbserial-*` or similar. Check with `ls -la /dev/tty.* /dev/cu.*`
+  - If the device is not recognized, install the appropriate USB-to-Serial driver (e.g., CH340, CP2102, FTDI drivers)
 
 ### Install from npm
 
@@ -37,6 +57,8 @@ npm install ./mifare-reader-js-1.0.0.tgz
 ```
 
 ## Quick Start
+
+> **Note**: If the device does not respond during initialization, try changing the baudrate. Common values are `9600`, `19200`, `57600`, or `115200`. Different reader models may use different default baudrates.
 
 ### TypeScript Example
 
