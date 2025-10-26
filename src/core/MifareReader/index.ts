@@ -1,5 +1,5 @@
 import { SerialPort } from "serialport";
-import { BEEP_COMMAND, COLOR_TYPE, COLORS, EXPECTED_BEEP_RESPONSE, KEY_MODE, KEY_MODE_TYPE, LED_COMMAND_PREFIX, LED_EXPECTED_RESPONSE, MifareReaderInterface, OPEN_PORT_EXPECTED_RESPONSE, OPEN_PORT_PREFIX, READ_CARD_COMMAND, RF_AUTHEN_COMMAND_PREFIX, RF_AUTHEN_EXPECTED_RESPONSE, SELECT_CARD_COMMAND } from "../../types/types.js";
+import { EXPECTED_SELECT_CARD_RESPONSE_PREFIX, BEEP_COMMAND, COLOR_TYPE, COLORS, EXPECTED_BEEP_RESPONSE, KEY_MODE, KEY_MODE_TYPE, LED_COMMAND_PREFIX, LED_EXPECTED_RESPONSE, MifareReaderInterface, OPEN_PORT_EXPECTED_RESPONSE, OPEN_PORT_PREFIX, READ_CARD_COMMAND, RF_AUTHEN_COMMAND_PREFIX, RF_AUTHEN_EXPECTED_RESPONSE, SELECT_CARD_COMMAND } from "../../types/types.js";
 import { resolve } from "path";
 
 
@@ -8,13 +8,15 @@ class MifareReader implements MifareReaderInterface {
     private port: SerialPort | null = null;
     private baudRate: 9600 | 19200 | 57600 | 115200 = 19200;
     private isOpenPort: boolean = false
+    private timeout: number = 1000
 
-    async initialize(portNo: string, baudRate: 9600 | 19200 | 57600 | 115200, maxRetries: number = 20): Promise<any> {
+    async initialize(portNo: string, baudRate: 9600 | 19200 | 57600 | 115200, maxRetries: number = 20, timeout: number = this.timeout): Promise<any> {
         this.port = new SerialPort({
             path: portNo,
             baudRate: baudRate
         })
         this.baudRate = baudRate;
+        this.timeout = timeout
         const openPortCommand = this.getOpenPortCommand(this.baudRate);
 
         let response = null;
@@ -57,13 +59,12 @@ class MifareReader implements MifareReaderInterface {
         try {
             const response = await this.sendCommandAndWait(SELECT_CARD_COMMAND);
 
-            // Check if 3rd byte (index 2) is 0x0a
-            if (response.length < 3 || response[2] !== 0x0a) {
-                // FAILED TO SELECT CARD
-                return null
-            }
+            const responsePrefix = response.subarray(0, 9);
 
-            const cardData = response.subarray(6);
+            if (Buffer.compare(responsePrefix, EXPECTED_SELECT_CARD_RESPONSE_PREFIX) !== 0) {
+                return null;
+            }
+            const cardData = response.subarray(9, 13);
 
             return cardData.toString('hex');
         }
@@ -192,7 +193,7 @@ class MifareReader implements MifareReaderInterface {
         }
     }
 
-    private async sendCommandAndWait(command: Array<number> | Buffer, timeout: number = 5000): Promise<Buffer> {
+    private async sendCommandAndWait(command: Array<number> | Buffer, timeout: number = this.timeout): Promise<Buffer> {
         return new Promise((resolve, reject) => {
             if (!this.port) {
                 reject(new Error('Port is not open'));

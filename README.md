@@ -509,6 +509,15 @@ The `prepublishOnly` script automatically builds before publishing.
 
 ---
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes and version updates.
+
+### Latest Version (1.0.3)
+- **Fixed**: Select card ID issue - `selectCard()` now returns correct card ID
+
+---
+
 ## License
 
 ISC
